@@ -2,75 +2,78 @@
 % ========================================================================= 
 % [Aim]
     % simulate fractal time series by 1-D fractional Brownian motion
-    % and wrap these data as the format of FieldTrip
+    % and wrap these data as the format of EEGLab
 
 % [Input] cfg
 % a struct for arguments
 % cfg.N
-    % each series generated will be treated as a trial in FT 
+    % each series generated will be treated as a trial in EEG 
 % cfg.Hurst
     % Hurst exponent, should be a scalar or a vector which length==cfg.N
     % and range from 0~1
-% cfg.with
-    % 
 
 % [Output] FT
 
 % =========================================================================
 
-function [FT] = ft_fractalSim(cfg)
+function [EEG] = eeg_fractalSim(cfg)
 
-    FT = [];
-    FT.fsample  = 1024;
+    EEG = [];
+    EEG.srate  = 1024;
+    EEG.npnts  = 1025;
+    EEG.times  = 0:1/1024:1;
     
     % ======================================
 
-    ft_checkopt(cfg,'N','doublescalar');
-    ft_checkopt(cfg,'Hurst','doublevector');
-
+    if(not(isfield(cfg,'N')))
+        error("[eeglab_fractalSim] 'N' can't be empty.");
+    end
     if(mod(cfg.N,1)~=0)
-        ft_error("[ft_fractalSim] cfg.N should be an integar.");
+        error("[eeglab_fractalSim] cfg.N should be an integar.");
     end
 
-
-    N_hurst = numel(cfg.Hurst);
+    
+    if(not(isfield(cfg,'Hurst')))
+        error("[eeglab_fractalSim] 'Hurst' can't be empty.");
+    end
     if(min(cfg.Hurst)<0||max(cfg.Hurst)>1)
-        ft_error("[ft_fractalSim] Hurst exponent shoud range from 0 to 1.");
+        error("[eeglab_fractalSim] Hurst exponent shoud range from 0 to 1.");
     end
+    N_hurst = numel(cfg.Hurst);
     if(N_hurst==1)
         cfg.Hurst = ones(1,cfg.N) * cfg.Hurst;
     elseif(N_hurst~=cfg.N)
-        ft_error("[ft_fractalSim] When Hurst is a vector, it length should be same as trial number N.");
+        error("[eeglab_fractalSim] When Hurst is a vector, it length should be same as trial number N.");
+    end
+
+
+    if(not(isfield(cfg,'with')))
+        cfg.with = ["none"];
+    elseif(not(isstring(cfg.with)))
+        error("[eeglab_fractalSim] cfg.with should be string or string vector.");
     end
 
     % ======================================
 
-    FT.label = {'Raw'};
+    EEG.trials = cfg.N;
+    EEG.nbchan = 1;
 
     for i=1:cfg.N
-        [X,T]            = tool_fbm(cfg.Hurst(i),1024,1); % See [1], just rename the function fbm1d
-        FT.time{i}       = T;
-        FT.trial{i}(1,:) = X;
+        [X,T] = tool_fbm(cfg.Hurst(i),1024,1); % See [1], just rename the function fbm1d
+        EEG.data(1,:,i) = X;
     end
 
     % ======================================
     
-    cfg.with = ft_getopt(cfg,'with',["none"]);
-    if(not(isstring(cfg.with)))
-        ft_error("[ft_fractalSim] cfg.with should be string or string vector.");
-    end
-
-    % ======================================
-
     for k=1:numel(cfg.with)
         command = char(cfg.with(k));
 
         if(any(strcmp(command,{'none','None','NONE'})))
             % Do Nothing
         elseif(startsWith(command,'N(')) % white noise like N(0.1,1)
-            FT = tool_withGaussianFT(FT,command);
+            EEG = tool_withGaussianEEG(EEG,command);
         elseif(startsWith(command,'O(')) % oscillation like O(A,f,phi)
-            FT = tool_withOscillationFT(FT,command);
+            EEG = tool_withOscillationEEG(EEG,command);
         else
             ft_error("[ft_fractalSim] Unknown cfg.with command.");
         end
