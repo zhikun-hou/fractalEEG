@@ -11,6 +11,11 @@
 % cfg.Hurst
     % Hurst exponent, should be a scalar or a vector which length==cfg.N
     % and range from 0~1
+% cfg.with
+    % string or string array
+    % N(mu,sigma) for white noise
+    % O(A,f,phi)  for oscillations
+    % see FT.label in generated data for more detail.
 
 % [Output] FT
 
